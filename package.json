@@ -1,0 +1,70 @@
+{
+	"name": "@joshuanode/n8n-nodes-ninja-one",
+	"version": "0.1.0",
+	"description": "n8n community node for NinjaOne RMM API integration",
+	"keywords": [
+		"n8n-community-node-package",
+		"n8n",
+		"ninjaone",
+		"ninjarmm",
+		"rmm",
+		"msp"
+	],
+	"license": "MIT",
+	"homepage": "https://github.com/ajoshuasmith/n8n-nodes-ninja-one",
+	"author": {
+		"name": "Joshua Smith"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ajoshuasmith/n8n-nodes-ninja-one.git"
+	},
+	"bugs": {
+		"url": "https://github.com/ajoshuasmith/n8n-nodes-ninja-one/issues"
+	},
+	"engines": {
+		"node": ">=18.17.0"
+	},
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsc && n8n-copy-static-files && n8n-generate-metadata",
+		"dev": "tsc --watch",
+		"lint": "eslint . --ext .ts",
+		"lintfix": "eslint . --ext .ts --fix",
+		"format": "prettier --write \"**/*.ts\"",
+		"prepublishOnly": "npm run build"
+	},
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"credentials": [
+			"dist/credentials/NinjaOneApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/NinjaOne/NinjaOne.node.js"
+		]
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.39.2",
+		"@types/node": "^22.10.0",
+		"@typescript-eslint/eslint-plugin": "^8.0.0",
+		"@typescript-eslint/parser": "^8.0.0",
+		"eslint": "^9.0.0",
+		"n8n-node-dev": "*",
+		"prettier": "^3.4.0",
+		"typescript": "^5.7.0",
+		"typescript-eslint": "^8.52.0"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"overrides": {
+		"form-data": "4.0.4"
+	}
+}

@@ -1,0 +1,19 @@
+{
+	"node": "n8n-nodes-ninjaone.ninjaOne",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Data & Storage"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://www.ninjaone.com/docs/integrations/how-to-set-up-api-oauth-token/"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://app.ninjarmm.com/apidocs/"
+			}
+		]
+	},
+	"alias": ["rmm", "msp", "ninjaone", "ninjarmm", "remote monitoring", "endpoint management"]
+}

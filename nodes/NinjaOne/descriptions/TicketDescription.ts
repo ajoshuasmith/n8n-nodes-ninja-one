@@ -1,0 +1,123 @@
+import type { INodeProperties } from 'n8n-workflow';
+
+export const ticketOperations: INodeProperties[] = [
+	{
+		displayName: 'Operation',
+		name: 'operation',
+		type: 'options',
+		noDataExpression: true,
+		displayOptions: { show: { resource: ['ticket'] } },
+		options: [
+			{ name: 'Add Comment', value: 'addComment', action: 'Add a comment to a ticket' },
+			{ name: 'Create', value: 'create', action: 'Create a ticket' },
+			{ name: 'Get', value: 'get', action: 'Get a ticket' },
+			{ name: 'Get Log Entries', value: 'getLogEntries', action: 'Get ticket log entries' },
+			{ name: 'Update', value: 'update', action: 'Update a ticket' },
+		],
+		default: 'create',
+	},
+];
+
+export const ticketFields: INodeProperties[] = [
+	{
+		displayName: 'Ticket ID',
+		name: 'ticketId',
+		type: 'number',
+		default: 0,
+		required: true,
+		displayOptions: { show: { resource: ['ticket'], operation: ['get', 'update', 'getLogEntries', 'addComment'] } },
+		description: 'The ID of the ticket. Supports expressions like {{ $json.ticketId }}.',
+	},
+	{
+		displayName: 'Comment',
+		name: 'ticketComment',
+		type: 'string',
+		typeOptions: { rows: 4 },
+		default: '',
+		required: true,
+		placeholder: 'Enter your comment or use {{ $json.comment }}',
+		displayOptions: { show: { resource: ['ticket'], operation: ['addComment'] } },
+		description: 'The comment text to add to the ticket. Supports expressions.',
+	},
+	{
+		displayName: 'Subject',
+		name: 'ticketSubject',
+		type: 'string',
+		default: '',
+		required: true,
+		placeholder: 'e.g., Server Alert or {{ $json.subject }}',
+		displayOptions: { show: { resource: ['ticket'], operation: ['create'] } },
+		description: 'Subject of the ticket. Supports expressions for dynamic ticket creation.',
+	},
+	{
+		displayName: 'Ticket Fields',
+		name: 'ticketFields',
+		type: 'collection',
+		placeholder: 'Add Field',
+		default: {},
+		displayOptions: { show: { resource: ['ticket'], operation: ['create', 'update'] } },
+		options: [
+			{
+				displayName: 'Client',
+				name: 'clientId',
+				type: 'resourceLocator',
+				default: { mode: 'list', value: '' },
+				modes: [
+					{
+						displayName: 'From List',
+						name: 'list',
+						type: 'list',
+						typeOptions: { searchListMethod: 'searchOrganizations', searchable: true },
+					},
+					{ displayName: 'By ID', name: 'id', type: 'string' },
+				],
+				description: 'The client (organization) for the ticket',
+			},
+			{
+				displayName: 'Description',
+				name: 'description',
+				type: 'string',
+				typeOptions: { rows: 4 },
+				default: '',
+				placeholder: 'Enter ticket description or use {{ $json.description }}',
+				description: 'Description of the ticket. Supports expressions for dynamic content.',
+			},
+			{
+				displayName: 'Priority',
+				name: 'priority',
+				type: 'options',
+				options: [
+					{ name: 'None', value: 'NONE' },
+					{ name: 'Low', value: 'LOW' },
+					{ name: 'Medium', value: 'MEDIUM' },
+					{ name: 'High', value: 'HIGH' },
+				],
+				default: 'NONE',
+				description: 'Priority of the ticket',
+			},
+			{
+				displayName: 'Status',
+				name: 'status',
+				type: 'options',
+				options: [
+					{ name: 'Open', value: 'OPEN' },
+					{ name: 'In Progress', value: 'IN_PROGRESS' },
+					{ name: 'Waiting', value: 'WAITING' },
+					{ name: 'Resolved', value: 'RESOLVED' },
+					{ name: 'Closed', value: 'CLOSED' },
+				],
+				default: 'OPEN',
+				description: 'Status of the ticket',
+			},
+			{
+				displayName: 'Subject',
+				name: 'subject',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g., Updated Subject or {{ $json.subject }}',
+				description: 'Subject of the ticket (for update). Supports expressions.',
+				displayOptions: { show: { '/operation': ['update'] } },
+			},
+		],
+	},
+];

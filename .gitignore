@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.npm-cache/
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.*
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Package files (generated)
+*.tgz
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# API specs (downloaded for verification)
+ninjaone-api.json
+
+# Credentials (never commit)
+credentials.json
+secrets.json
+*.pem
+*.key
