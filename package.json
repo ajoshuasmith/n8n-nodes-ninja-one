@@ -1,6 +1,6 @@
 {
 	"name": "@joshuanode/n8n-nodes-ninja-one",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "n8n community node for NinjaOne RMM API integration",
 	"keywords": [
 		"n8n-community-node-package",

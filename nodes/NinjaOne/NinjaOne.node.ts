@@ -30,8 +30,8 @@ import {
 
 export class NinjaOne implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'NinjaOne',
-		name: 'ninjaOne',
+		displayName: 'NinjaOne RMM',
+		name: 'ninjaOneRmm',
 		icon: 'file:ninjaone.svg',
 		group: ['transform'],
 		version: 1,
