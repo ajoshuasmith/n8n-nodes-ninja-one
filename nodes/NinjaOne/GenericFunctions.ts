@@ -7,27 +7,10 @@ import type {
 	JsonObject,
 } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError } from 'n8n-workflow';
-import { createHash } from 'crypto';
-
-interface TokenCache {
-	accessToken: string;
-	expiresAt: number;
-}
-
-const tokenCache: Map<string, TokenCache> = new Map();
 
 // Maximum retries for rate-limited requests
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
-
-/**
- * Creates a secure cache key that includes a hash of the client secret
- * to prevent token leakage across different credentials with same clientId
- */
-function createCacheKey(clientId: string, clientSecret: string, region: string): string {
-	const secretHash = createHash('sha256').update(clientSecret).digest('hex').substring(0, 8);
-	return `${clientId}-${region}-${secretHash}`;
-}
 
 function getBaseUrl(region: string): string {
 	switch (region) {
@@ -35,9 +18,41 @@ function getBaseUrl(region: string): string {
 			return 'https://eu.ninjarmm.com';
 		case 'oc':
 			return 'https://oc.ninjarmm.com';
+		case 'app':
+		case 'us':
 		default:
 			return 'https://app.ninjarmm.com';
 	}
+}
+
+interface CredentialInfo {
+	accessToken: string;
+	baseUrl: string;
+}
+
+/**
+ * Gets OAuth2 credentials and access token
+ */
+async function getCredentialInfo(
+	context: IExecuteFunctions | ILoadOptionsFunctions,
+): Promise<CredentialInfo> {
+	const credentials = await context.getCredentials('ninjaOneOAuth2Api');
+	const region = credentials.region as string;
+	const baseUrl = getBaseUrl(region);
+
+	// n8n manages OAuth2 tokens - access via oauthTokenData
+	const tokenData = credentials.oauthTokenData as { access_token?: string } | undefined;
+
+	if (!tokenData?.access_token) {
+		throw new NodeApiError(context.getNode(), {} as JsonObject, {
+			message: 'No OAuth token found. Please reconnect your NinjaOne OAuth2 credential.',
+		});
+	}
+
+	return {
+		accessToken: tokenData.access_token,
+		baseUrl,
+	};
 }
 
 export function sleep(ms: number): Promise<void> {
@@ -72,59 +87,8 @@ export function sanitizeId(id: string, fieldName: string): string {
 export async function getAccessToken(
 	this: IExecuteFunctions | ILoadOptionsFunctions,
 ): Promise<string> {
-	const credentials = await this.getCredentials('ninjaOneApi');
-	const region = credentials.region as string;
-	const clientId = credentials.clientId as string;
-	const clientSecret = credentials.clientSecret as string;
-	const scope = credentials.scope as string;
-
-	// Use secure cache key that includes credential identifier
-	const cacheKey = createCacheKey(clientId, clientSecret, region);
-	const cached = tokenCache.get(cacheKey);
-
-	if (cached && cached.expiresAt > Date.now()) {
-		return cached.accessToken;
-	}
-
-	const baseUrl = getBaseUrl(region);
-	const tokenUrl = `${baseUrl}/oauth/token`;
-
-	const requestOptions: IHttpRequestOptions = {
-		method: 'POST',
-		url: tokenUrl,
-		headers: {
-			'Content-Type': 'application/x-www-form-urlencoded',
-		},
-		body: new URLSearchParams({
-			grant_type: 'client_credentials',
-			client_id: clientId,
-			client_secret: clientSecret,
-			scope: scope,
-		}).toString(),
-		returnFullResponse: false,
-		json: true,
-	};
-
-	try {
-		const response = (await this.helpers.httpRequest(requestOptions)) as {
-			access_token: string;
-			expires_in: number;
-		};
-
-		// Cache with 60 second buffer before expiry
-		const expiresAt = Date.now() + (response.expires_in - 60) * 1000;
-
-		tokenCache.set(cacheKey, {
-			accessToken: response.access_token,
-			expiresAt,
-		});
-
-		return response.access_token;
-	} catch (error) {
-		throw new NodeApiError(this.getNode(), error as JsonObject, {
-			message: 'Failed to obtain access token. Check your Client ID and Client Secret.',
-		});
-	}
+	const credInfo = await getCredentialInfo(this);
+	return credInfo.accessToken;
 }
 
 export async function ninjaOneApiRequest(
@@ -135,10 +99,7 @@ export async function ninjaOneApiRequest(
 	qs: IDataObject = {},
 	retryCount = 0,
 ): Promise<IDataObject | IDataObject[]> {
-	const credentials = await this.getCredentials('ninjaOneApi');
-	const region = credentials.region as string;
-	const baseUrl = getBaseUrl(region);
-	const accessToken = await getAccessToken.call(this);
+	const { accessToken, baseUrl } = await getCredentialInfo(this);
 
 	const options: IHttpRequestOptions = {
 		method,
@@ -162,14 +123,8 @@ export async function ninjaOneApiRequest(
 		const err = error as { response?: { status?: number }; message?: string };
 
 		if (err.response?.status === 401) {
-			// Clear cached token for this credential
-			const clientId = credentials.clientId as string;
-			const clientSecret = credentials.clientSecret as string;
-			const cacheKey = createCacheKey(clientId, clientSecret, region);
-			tokenCache.delete(cacheKey);
-
 			throw new NodeApiError(this.getNode(), error as JsonObject, {
-				message: 'Authentication failed. Token may have expired.',
+				message: 'Authentication failed. Token may have expired. Try reconnecting your NinjaOne OAuth2 credential.',
 			});
 		}
 
