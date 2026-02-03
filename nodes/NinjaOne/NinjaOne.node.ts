@@ -578,8 +578,13 @@ export class NinjaOne implements INodeType {
 						const scriptParameters = this.getNodeParameter('scriptParameters', i, '') as string;
 						const runAs = this.getNodeParameter('runAs', i, '') as string;
 
+						const scriptIdNum = parseInt(scriptId, 10);
+						if (isNaN(scriptIdNum)) {
+							throw new Error(`Invalid script ID: "${scriptId}". Script ID must be a number.`);
+						}
+
 						const body: IDataObject = {
-							id: parseInt(scriptId, 10),
+							id: scriptIdNum,
 							type: 'SCRIPT',
 						};
 
@@ -852,10 +857,11 @@ export class NinjaOne implements INodeType {
 						const body: IDataObject = { subject };
 
 						if (ticketFields.clientId) {
-							body.clientId = parseInt(
-								extractValue(ticketFields.clientId as string | { value: string }),
-								10,
-							);
+							const clientIdStr = extractValue(ticketFields.clientId as string | { value: string });
+							const clientIdNum = parseInt(clientIdStr, 10);
+							if (!isNaN(clientIdNum)) {
+								body.clientId = clientIdNum;
+							}
 						}
 						if (ticketFields.description) body.description = ticketFields.description;
 						if (ticketFields.priority) body.priority = ticketFields.priority;
@@ -874,10 +880,11 @@ export class NinjaOne implements INodeType {
 						const body: IDataObject = {};
 
 						if (ticketFields.clientId) {
-							body.clientId = parseInt(
-								extractValue(ticketFields.clientId as string | { value: string }),
-								10,
-							);
+							const clientIdStr = extractValue(ticketFields.clientId as string | { value: string });
+							const clientIdNum = parseInt(clientIdStr, 10);
+							if (!isNaN(clientIdNum)) {
+								body.clientId = clientIdNum;
+							}
 						}
 						if (ticketFields.description) body.description = ticketFields.description;
 						if (ticketFields.priority) body.priority = ticketFields.priority;

@@ -27,10 +27,12 @@ export const listSearchMethods = {
 				qs,
 			)) as IDataObject[];
 
-			let results = orgs.map((org) => ({
-				name: org.name as string,
-				value: String(org.id),
-			}));
+			let results = orgs
+				.filter((org) => org.id != null)
+				.map((org) => ({
+					name: String(org.name || `Organization ${org.id}`),
+					value: String(org.id),
+				}));
 
 			if (filter) {
 				const lowerFilter = filter.toLowerCase();
@@ -156,10 +158,12 @@ export const listSearchMethods = {
 				{},
 			)) as IDataObject[];
 
-			let results = groups.map((group) => ({
-				name: group.name as string,
-				value: String(group.id),
-			}));
+			let results = groups
+				.filter((group) => group.id != null)
+				.map((group) => ({
+					name: String(group.name || `Group ${group.id}`),
+					value: String(group.id),
+				}));
 
 			if (filter) {
 				const lowerFilter = filter.toLowerCase();
@@ -185,10 +189,12 @@ export const listSearchMethods = {
 				{},
 			)) as IDataObject[];
 
-			let results = scripts.map((script) => ({
-				name: script.name as string,
-				value: String(script.id),
-			}));
+			let results = scripts
+				.filter((script) => script.id != null)
+				.map((script) => ({
+					name: String(script.name || `Script ${script.id}`),
+					value: String(script.id),
+				}));
 
 			if (filter) {
 				const lowerFilter = filter.toLowerCase();
