@@ -45,7 +45,7 @@ export class NinjaOne implements INodeType {
 		usableAsTool: true,
 		credentials: [
 			{
-				name: 'ninjaOneApi',
+				name: 'ninjaOneOAuth2Api',
 				required: true,
 			},
 		],
@@ -576,6 +576,7 @@ export class NinjaOne implements INodeType {
 							this.getNodeParameter('scriptId', i) as string | { value: string },
 						);
 						const scriptParameters = this.getNodeParameter('scriptParameters', i, '') as string;
+						const runAs = this.getNodeParameter('runAs', i, '') as string;
 
 						const body: IDataObject = {
 							id: parseInt(scriptId, 10),
@@ -584,6 +585,16 @@ export class NinjaOne implements INodeType {
 
 						if (scriptParameters) {
 							body.parameters = scriptParameters;
+						}
+
+						// Always include runAs - default to "system" if not specified
+						// NinjaOne requires this field for script execution via API
+						if (runAs) {
+							// Try to parse as number for credential IDs, otherwise use as string
+							const runAsNum = parseInt(runAs, 10);
+							body.runAs = !isNaN(runAsNum) && String(runAsNum) === runAs ? runAsNum : runAs;
+						} else {
+							body.runAs = 'system';
 						}
 
 						responseData = (await ninjaOneApiRequest.call(

@@ -187,6 +187,16 @@ export const deviceFields: INodeProperties[] = [
 		description: 'Parameters to pass to the script. Supports expressions for dynamic values.',
 	},
 	{
+		displayName: 'Run As (Credential)',
+		name: 'runAs',
+		type: 'string',
+		default: '',
+		placeholder: 'e.g., system, sysop, or 66',
+		displayOptions: { show: { resource: ['device'], operation: ['runScript'] } },
+		description:
+			'The credential or role to use when running the script. Use "system" (lowercase), credential name (e.g., sysop), or credential ID (e.g., 66). Defaults to "system" if empty.',
+	},
+	{
 		displayName: 'Custom Fields',
 		name: 'customFields',
 		type: 'fixedCollection',
