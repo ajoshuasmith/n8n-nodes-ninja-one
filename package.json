@@ -1,6 +1,6 @@
 {
 	"name": "@joshuanode/n8n-nodes-ninja-one",
-	"version": "0.1.1",
+	"version": "0.2.2",
 	"description": "n8n community node for NinjaOne RMM API integration",
 	"keywords": [
 		"n8n-community-node-package",
@@ -41,7 +41,7 @@
 	"n8n": {
 		"n8nNodesApiVersion": 1,
 		"credentials": [
-			"dist/credentials/NinjaOneApi.credentials.js"
+			"dist/credentials/NinjaOneOAuth2Api.credentials.js"
 		],
 		"nodes": [
 			"dist/nodes/NinjaOne/NinjaOne.node.js"
