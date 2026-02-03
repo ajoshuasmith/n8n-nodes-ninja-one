@@ -241,6 +241,20 @@ export function extractValue(
 }
 
 /**
+ * Extracts value and throws if empty (for required fields)
+ */
+export function extractRequiredValue(
+	value: string | { value: string } | { __rl: boolean; value: string; mode: string } | undefined | null,
+	fieldName: string,
+): string {
+	const extracted = extractValue(value);
+	if (!extracted) {
+		throw new Error(`${fieldName} is required but was empty or not provided.`);
+	}
+	return extracted;
+}
+
+/**
  * Extracts value and validates it as a valid ID for API paths
  */
 export function extractAndValidateId(

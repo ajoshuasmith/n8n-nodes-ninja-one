@@ -9,6 +9,7 @@ import {
 	ninjaOneApiRequest,
 	ninjaOneApiRequestAllItems,
 	extractValue,
+	extractRequiredValue,
 	parseDeviceIds,
 } from './GenericFunctions';
 import { listSearchMethods } from './ListSearchMethods';
@@ -616,9 +617,15 @@ export class NinjaOne implements INodeType {
 						const end = this.getNodeParameter('maintenanceEnd', i) as string;
 						const disableAlerts = this.getNodeParameter('maintenanceDisableAlerts', i) as boolean;
 
+						const startTime = new Date(start).getTime();
+						const endTime = new Date(end).getTime();
+						if (isNaN(startTime) || isNaN(endTime)) {
+							throw new Error('Invalid date format for maintenance start or end time.');
+						}
+
 						const body: IDataObject = {
-							start: new Date(start).getTime() / 1000,
-							end: new Date(end).getTime() / 1000,
+							start: startTime / 1000,
+							end: endTime / 1000,
 							disabledFeatures: disableAlerts ? ['ALERTS'] : [],
 						};
 
