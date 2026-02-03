@@ -99,13 +99,14 @@ export async function ninjaOneApiRequest(
 	qs: IDataObject = {},
 	retryCount = 0,
 ): Promise<IDataObject | IDataObject[]> {
-	const { accessToken, baseUrl } = await getCredentialInfo(this);
+	const credentials = await this.getCredentials('ninjaOneOAuth2Api');
+	const region = credentials.region as string;
+	const baseUrl = getBaseUrl(region);
 
 	const options: IHttpRequestOptions = {
 		method,
 		url: `${baseUrl}${endpoint}`,
 		headers: {
-			Authorization: `Bearer ${accessToken}`,
 			'Content-Type': 'application/json',
 		},
 		qs,
@@ -117,7 +118,12 @@ export async function ninjaOneApiRequest(
 	}
 
 	try {
-		const response = await this.helpers.httpRequest(options);
+		// Use httpRequestWithAuthentication for automatic OAuth2 token refresh
+		const response = await this.helpers.httpRequestWithAuthentication.call(
+			this,
+			'ninjaOneOAuth2Api',
+			options,
+		);
 		return response as IDataObject | IDataObject[];
 	} catch (error) {
 		const err = error as { response?: { status?: number }; message?: string };
