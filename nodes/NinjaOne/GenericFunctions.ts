@@ -222,14 +222,17 @@ export async function ninjaOneApiRequestAllItems(
 export function extractValue(
 	value: string | { value: string } | { __rl: boolean; value: string; mode: string } | undefined | null,
 ): string {
-	let extracted: string;
-
 	if (value === undefined || value === null) {
 		return '';
-	} else if (typeof value === 'string') {
+	}
+
+	let extracted: string;
+
+	if (typeof value === 'string') {
 		extracted = value;
 	} else if (typeof value === 'object' && 'value' in value) {
-		extracted = value.value ?? '';
+		// value.value could be a number, so convert to string
+		extracted = value.value != null ? String(value.value) : '';
 	} else {
 		extracted = String(value);
 	}
