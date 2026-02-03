@@ -220,14 +220,16 @@ export async function ninjaOneApiRequestAllItems(
  * Extracts and validates the value from a resourceLocator or plain string
  */
 export function extractValue(
-	value: string | { value: string } | { __rl: boolean; value: string; mode: string },
+	value: string | { value: string } | { __rl: boolean; value: string; mode: string } | undefined | null,
 ): string {
 	let extracted: string;
 
-	if (typeof value === 'string') {
+	if (value === undefined || value === null) {
+		return '';
+	} else if (typeof value === 'string') {
 		extracted = value;
-	} else if (value && typeof value === 'object' && 'value' in value) {
-		extracted = value.value;
+	} else if (typeof value === 'object' && 'value' in value) {
+		extracted = value.value ?? '';
 	} else {
 		extracted = String(value);
 	}
