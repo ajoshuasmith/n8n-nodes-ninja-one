@@ -1,10 +1,22 @@
-import type { ICredentialType, INodeProperties } from 'n8n-workflow';
+import type {
+	ICredentialTestRequest,
+	ICredentialType,
+	INodeProperties,
+} from 'n8n-workflow';
 
 export class NinjaOneOAuth2Api implements ICredentialType {
 	name = 'ninjaOneOAuth2Api';
 	extends = ['oAuth2Api'];
 	displayName = 'NinjaOne OAuth2 API';
 	documentationUrl = 'https://www.ninjaone.com/docs/integrations/how-to-set-up-api-oauth-token/';
+
+	test: ICredentialTestRequest = {
+		request: {
+			baseURL: '=https://{{$credentials.region}}.ninjarmm.com',
+			url: '/api/v2/organizations',
+			qs: { pageSize: '1' },
+		},
+	};
 
 	properties: INodeProperties[] = [
 		{

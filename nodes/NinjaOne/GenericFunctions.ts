@@ -128,9 +128,19 @@ export async function ninjaOneApiRequest(
 	} catch (error) {
 		const err = error as { response?: { status?: number }; message?: string };
 
+		// On 401, retry once to give n8n another chance to refresh the OAuth2 token.
+		// httpRequestWithAuthentication checks token expiry before the request, but if
+		// the token expires between the check and the actual API call (or if n8n's
+		// expiry tracking is stale), the first request fails. Retrying triggers a
+		// fresh expiry check which detects the now-expired token and refreshes it.
+		if (err.response?.status === 401 && retryCount === 0) {
+			await sleep(1000);
+			return ninjaOneApiRequest.call(this, method, endpoint, body, qs, 1);
+		}
+
 		if (err.response?.status === 401) {
 			throw new NodeApiError(this.getNode(), error as JsonObject, {
-				message: 'Authentication failed. Token may have expired. Try reconnecting your NinjaOne OAuth2 credential.',
+				message: 'Authentication failed. Token may have expired — try reconnecting your NinjaOne OAuth2 credential in the Credentials menu.',
 			});
 		}
 
