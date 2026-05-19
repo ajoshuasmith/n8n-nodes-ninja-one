@@ -10,6 +10,7 @@ export const queryOperations: INodeProperties[] = [
 		options: [
 			{ name: 'Get Activities', value: 'getActivities', action: 'Get all activities' },
 			{ name: 'Get Antivirus Threats', value: 'getAntivirusThreats', action: 'Get antivirus threats' },
+			{ name: 'Get Custom Fields', value: 'getCustomFields', action: 'Get custom fields across all devices' },
 			{ name: 'Get Device Health', value: 'getDeviceHealth', action: 'Get device health summary' },
 			{ name: 'Get OS Patches', value: 'getOsPatches', action: 'Get all OS patches' },
 			{ name: 'Get Software Inventory', value: 'getSoftwareInventory', action: 'Get software inventory' },
@@ -67,6 +68,15 @@ export const queryFields: INodeProperties[] = [
 				type: 'number',
 				default: 0,
 				description: 'Return results since this Unix timestamp',
+			},
+			{
+				displayName: 'Fields',
+				name: 'fields',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g., field1,field2',
+				description: 'Comma-separated list of custom field names to return. Leave blank for all.',
+				displayOptions: { show: { '/operation': ['getCustomFields'] } },
 			},
 		],
 	},

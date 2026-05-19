@@ -1071,6 +1071,29 @@ export class NinjaOne implements INodeType {
 							)) as IDataObject;
 							responseData = (result.results as IDataObject[]) || [];
 						}
+					} else if (operation === 'getCustomFields') {
+						if (filters.fields) qs.fields = filters.fields;
+
+						if (returnAll) {
+							responseData = await ninjaOneApiRequestAllItems.call(
+								this,
+								'GET',
+								'/api/v2/queries/custom-fields',
+								{},
+								qs,
+								'results',
+							);
+						} else {
+							qs.pageSize = limit;
+							const result = (await ninjaOneApiRequest.call(
+								this,
+								'GET',
+								'/api/v2/queries/custom-fields',
+								{},
+								qs,
+							)) as IDataObject;
+							responseData = (result.results as IDataObject[]) || [];
+						}
 					}
 				}
 
