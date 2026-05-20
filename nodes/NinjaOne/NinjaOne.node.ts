@@ -1176,14 +1176,33 @@ export class NinjaOne implements INodeType {
 						if (filters.fields) qs.fields = filters.fields;
 
 						if (returnAll) {
-							responseData = await ninjaOneApiRequestAllItems.call(
-								this,
-								'GET',
-								'/api/v2/queries/custom-fields',
-								{},
-								qs,
-								'results',
-							);
+							// /api/v2/queries/custom-fields paginates with a cursor object
+							// ({ name, ... }); the next page is requested via ?cursor=<name>.
+							const allItems: IDataObject[] = [];
+							const pageSize = 100;
+							let cursor: string | undefined;
+							do {
+								const pageQs: IDataObject = { ...qs, pageSize };
+								if (cursor) {
+									pageQs.cursor = cursor;
+								}
+								const result = (await ninjaOneApiRequest.call(
+									this,
+									'GET',
+									'/api/v2/queries/custom-fields',
+									{},
+									pageQs,
+								)) as IDataObject;
+								const items = (result.results as IDataObject[]) || [];
+								allItems.push(...items);
+								const cursorObj = result.cursor as string | { name?: string } | undefined;
+								cursor = typeof cursorObj === 'string' ? cursorObj : cursorObj?.name;
+								// Stop on an empty page even if the API keeps returning a cursor.
+								if (items.length === 0) {
+									cursor = undefined;
+								}
+							} while (cursor);
+							responseData = allItems;
 						} else {
 							qs.pageSize = limit;
 							const result = (await ninjaOneApiRequest.call(
