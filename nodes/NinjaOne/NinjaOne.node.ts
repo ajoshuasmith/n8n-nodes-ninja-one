@@ -24,10 +24,94 @@ import { groupOperations, groupFields } from './descriptions/GroupDescription';
 import { ticketOperations, ticketFields } from './descriptions/TicketDescription';
 import { webhookOperations, webhookFields } from './descriptions/WebhookDescription';
 import { queryOperations, queryFields } from './descriptions/QueryDescription';
+import { backupOperations, backupFields } from './descriptions/BackupDescription';
 import {
 	windowsServiceOperations,
 	windowsServiceFields,
 } from './descriptions/WindowsServiceDescription';
+
+function splitTopLevelAnd(filter: string): string[] {
+	const parts: string[] = [];
+	let depth = 0;
+	let start = 0;
+	const normalized = filter.trim();
+	for (let i = 0; i < normalized.length; i++) {
+		const current = normalized[i];
+		if (current === '(') depth++;
+		if (current === ')') depth = Math.max(depth - 1, 0);
+		if (
+			depth === 0 &&
+			normalized.slice(i, i + 5).toUpperCase() === ' AND ' &&
+			i + 5 <= normalized.length
+		) {
+			parts.push(normalized.slice(start, i).trim());
+			start = i + 5;
+			i += 4;
+		}
+	}
+	parts.push(normalized.slice(start).trim());
+	return parts.filter(Boolean);
+}
+
+function normalizeFilterValue(value: string): string {
+	return value.trim().replace(/^['"]|['"]$/g, '');
+}
+
+function getDeviceFilterFieldValue(device: IDataObject, fieldName: string): unknown {
+	const normalizedField = fieldName.trim().toLowerCase();
+	const fieldMap: Record<string, string> = {
+		class: 'nodeClass',
+		nodeclass: 'nodeClass',
+		org: 'organizationId',
+		organizationid: 'organizationId',
+		locationid: 'locationId',
+		status: 'approvalStatus',
+		approvalstatus: 'approvalStatus',
+		name: 'displayName',
+		displayname: 'displayName',
+		systemname: 'systemName',
+		dnsname: 'dnsName',
+		offline: 'offline',
+	};
+	const propertyName = fieldMap[normalizedField] ?? fieldName;
+	return device[propertyName];
+}
+
+function matchesDeviceFilterClause(device: IDataObject, clause: string): boolean {
+	const trimmedClause = clause
+		.trim()
+		.replace(/^\((.*)\)$/s, '$1')
+		.trim();
+	const inMatch = trimmedClause.match(/^([a-zA-Z0-9_]+)\s+in\s+\((.+)\)$/i);
+	if (inMatch) {
+		const [, rawField, rawValues] = inMatch;
+		const deviceValue = getDeviceFilterFieldValue(device, rawField);
+		if (deviceValue === undefined || deviceValue === null) {
+			return false;
+		}
+		const acceptableValues = rawValues
+			.split(',')
+			.map((value) => normalizeFilterValue(value).toUpperCase());
+		return acceptableValues.includes(String(deviceValue).toUpperCase());
+	}
+	const equalsMatch = trimmedClause.match(/^([a-zA-Z0-9_]+)\s*=\s*(.+)$/i);
+	if (equalsMatch) {
+		const [, rawField, rawValue] = equalsMatch;
+		const deviceValue = getDeviceFilterFieldValue(device, rawField);
+		if (deviceValue === undefined || deviceValue === null) {
+			return false;
+		}
+		return String(deviceValue).toUpperCase() === normalizeFilterValue(rawValue).toUpperCase();
+	}
+	return true;
+}
+
+function applyLocalDeviceFilter(devices: IDataObject[], deviceFilter: string): IDataObject[] {
+	const clauses = splitTopLevelAnd(deviceFilter);
+	return devices.filter((device) =>
+		clauses.every((clause) => matchesDeviceFilterClause(device, clause)),
+	);
+}
 
 export class NinjaOne implements INodeType {
 	description: INodeTypeDescription = {
@@ -58,6 +142,7 @@ export class NinjaOne implements INodeType {
 				noDataExpression: true,
 				options: [
 					{ name: 'Alert', value: 'alert' },
+					{ name: 'Backup', value: 'backup' },
 					{ name: 'Device', value: 'device' },
 					{ name: 'Group', value: 'group' },
 					{ name: 'Location', value: 'location' },
@@ -96,6 +181,9 @@ export class NinjaOne implements INodeType {
 			// Query
 			...queryOperations,
 			...queryFields,
+			// Backup
+			...backupOperations,
+			...backupFields,
 		],
 	};
 
@@ -184,7 +272,20 @@ export class NinjaOne implements INodeType {
 
 						const orgIdValue = extractValue(deviceOrgId);
 						if (orgIdValue) {
-							if (returnAll) {
+							if (filters.df) {
+								const orgDevices = (await ninjaOneApiRequestAllItems.call(
+									this,
+									'GET',
+									`/api/v2/organization/${orgIdValue}/devices`,
+									{},
+									{},
+								)) as IDataObject[];
+								const filteredDevices = applyLocalDeviceFilter(
+									orgDevices,
+									filters.df as string,
+								);
+								responseData = returnAll ? filteredDevices : filteredDevices.slice(0, limit);
+							} else if (returnAll) {
 								responseData = await ninjaOneApiRequestAllItems.call(
 									this,
 									'GET',
@@ -1094,6 +1195,143 @@ export class NinjaOne implements INodeType {
 							)) as IDataObject;
 							responseData = (result.results as IDataObject[]) || [];
 						}
+					}
+				}
+
+				// ==================== BACKUP ====================
+				if (resource === 'backup') {
+					const operationPath: Record<string, string> = {
+						getJobs: '/api/v2/backup/jobs',
+						getIntegrityCheckJobs: '/api/v2/backup/integrity-check-jobs',
+						getDeviceUsage: '/api/v2/queries/backup/usage',
+					};
+
+					if (
+						operation === 'getJobs' ||
+						operation === 'getIntegrityCheckJobs' ||
+						operation === 'getDeviceUsage'
+					) {
+						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+						const limit = this.getNodeParameter('limit', i, 50) as number;
+						const endpoint = operationPath[operation];
+						const backupFilters = this.getNodeParameter('backupFilters', i, {}) as IDataObject;
+						const qs: IDataObject = {};
+
+						if (operation === 'getJobs' || operation === 'getIntegrityCheckJobs') {
+							if (backupFilters.df) qs.df = backupFilters.df;
+							if (backupFilters.ddf) qs.ddf = backupFilters.ddf;
+							if (backupFilters.sf) qs.sf = backupFilters.sf;
+							if (backupFilters.ptf) qs.ptf = backupFilters.ptf;
+							if (backupFilters.stf) qs.stf = backupFilters.stf;
+							if (backupFilters.include) qs.include = backupFilters.include;
+						}
+
+						if (operation === 'getDeviceUsage') {
+							const includeDeletedDevices = this.getNodeParameter(
+								'includeDeletedDevices',
+								i,
+								false,
+							) as boolean;
+							qs.includeDeletedDevices = includeDeletedDevices;
+						}
+
+						if (!returnAll) {
+							qs.pageSize = limit;
+							const result = (await ninjaOneApiRequest.call(
+								this,
+								'GET',
+								endpoint,
+								{},
+								qs,
+							)) as IDataObject;
+							responseData = (result.results as IDataObject[]) || [];
+						} else {
+							const allItems: IDataObject[] = [];
+							const pageSize = 100;
+							let cursor: string | undefined;
+							do {
+								const pageQs: IDataObject = { ...qs, pageSize };
+								if (cursor) {
+									pageQs.cursor = cursor;
+								}
+								const result = (await ninjaOneApiRequest.call(
+									this,
+									'GET',
+									endpoint,
+									{},
+									pageQs,
+								)) as IDataObject;
+								const items = (result.results as IDataObject[]) || [];
+								allItems.push(...items);
+								const cursorObj = result.cursor as string | { name?: string } | undefined;
+								cursor = typeof cursorObj === 'string' ? cursorObj : cursorObj?.name;
+							} while (cursor);
+							responseData = allItems;
+						}
+					} else if (operation === 'submitIntegrityCheckJob') {
+						const deviceId = parseInt(
+							extractRequiredValue(
+								this.getNodeParameter('backupDeviceId', i) as string | { value: string },
+								'Device',
+							),
+							10,
+						);
+						const planUid = this.getNodeParameter('planUid', i) as string;
+						responseData = (await ninjaOneApiRequest.call(
+							this,
+							'POST',
+							'/api/v2/backup/integrity-check-jobs',
+							{ deviceId, planUid },
+						)) as IDataObject;
+					} else if (operation === 'setBandwidthThrottle') {
+						const deviceId = parseInt(
+							extractRequiredValue(
+								this.getNodeParameter('backupDeviceId', i) as string | { value: string },
+								'Device',
+							),
+							10,
+						);
+						const bandwidthThrottleJson = this.getNodeParameter(
+							'bandwidthThrottle',
+							i,
+							'{}',
+						) as string;
+						let bandwidthThrottle: IDataObject = {};
+						try {
+							bandwidthThrottle = JSON.parse(bandwidthThrottleJson) as IDataObject;
+						} catch {
+							bandwidthThrottle = {};
+						}
+						responseData = (await ninjaOneApiRequest.call(
+							this,
+							'POST',
+							'/api/v2/backup/bandwidth-throttle',
+							{ deviceId, bandwidthThrottle },
+						)) as IDataObject;
+					} else if (operation === 'getOrganizationLocationsUsage') {
+						const organizationId = extractRequiredValue(
+							this.getNodeParameter('backupOrganizationId', i) as string | { value: string },
+							'Organization',
+						);
+						responseData = (await ninjaOneApiRequest.call(
+							this,
+							'GET',
+							`/api/v2/organization/${organizationId}/locations/backup/usage`,
+						)) as IDataObject;
+					} else if (operation === 'getOrganizationLocationUsage') {
+						const organizationId = extractRequiredValue(
+							this.getNodeParameter('backupOrganizationId', i) as string | { value: string },
+							'Organization',
+						);
+						const locationId = extractRequiredValue(
+							this.getNodeParameter('backupLocationId', i) as string | { value: string },
+							'Location',
+						);
+						responseData = (await ninjaOneApiRequest.call(
+							this,
+							'GET',
+							`/api/v2/organization/${organizationId}/locations/${locationId}/backup/usage`,
+						)) as IDataObject;
 					}
 				}
 

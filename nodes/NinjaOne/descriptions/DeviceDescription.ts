@@ -285,7 +285,8 @@ export const deviceFields: INodeProperties[] = [
 				type: 'string',
 				default: '',
 				placeholder: 'e.g., status=APPROVED or {{ $json.filter }}',
-				description: 'Device filter query string. Supports expressions for dynamic filtering.',
+				description:
+					'Device filter query string. Supports expressions for dynamic filtering. When Organization is set, the node automatically applies the organization constraint to the filter.',
 			},
 		],
 	},
